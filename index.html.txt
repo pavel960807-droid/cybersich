@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CyberSich Economy</title>
+    <style>
+        body { background: #000; color: #00f0ff; font-family: 'Courier New', monospace; text-align: center; margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .box { border: 1px solid #00f0ff; padding: 40px 20px; border-radius: 20px; box-shadow: 0 0 20px #00444a; width: 90%; background: #050505; }
+        .label { font-size: 0.8em; color: #555; text-transform: uppercase; margin-bottom: 5px; }
+        .value { font-size: 2.5em; font-weight: bold; margin-bottom: 30px; text-shadow: 0 0 10px #00f0ff; }
+        .progress-bar { width: 100%; height: 10px; background: #111; border-radius: 5px; margin-bottom: 20px; overflow: hidden; }
+        .fill { height: 100%; background: #00f0ff; width: 0%; transition: width 0.5s; }
+        button { background: #00f0ff; color: #000; border: none; padding: 15px 40px; border-radius: 10px; font-weight: bold; font-size: 1.1em; cursor: pointer; width: 100%; }
+        button:disabled { background: #222; color: #444; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <div class="label">CyberSich Wallet</div>
+        <div class="value" id="wallet">0.0 $SICH</div>
+        
+        <div class="label">Mining Progress (0.1 SICH)</div>
+        <div class="progress-bar"><div class="fill" id="fill"></div></div>
+        
+        <button id="btn" onclick="claim()" disabled>WAITING FOR 0.1 SICH...</button>
+    </div>
+
+    <script>
+        let wallet = 0.0;
+        let progress = 0;
+        const btn = document.getElementById('btn');
+        const fill = document.getElementById('fill');
+
+        function startMining() {
+            setInterval(() => {
+                if (progress < 100) {
+                    progress += 1; // 1% кожну секунду (разом 100 секунд до 0.1 SICH)
+                    fill.style.width = progress + "%";
+                    if (progress >= 100) {
+                        btn.disabled = false;
+                        btn.innerText = "CLAIM 0.1 SICH";
+                    }
+                }
+            }, 1000); 
+        }
+
+        function claim() {
+            wallet = (parseFloat(wallet) + 0.1).toFixed(1);
+            document.getElementById('wallet').innerText = wallet + " $SICH";
+            progress = 0;
+            fill.style.width = "0%";
+            btn.disabled = true;
+            btn.innerText = "WAITING FOR 0.1 SICH...";
+        }
+
+        startMining();
+    </script>
+</body>
+</html>
