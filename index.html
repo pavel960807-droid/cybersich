@@ -33,31 +33,68 @@
     </div>
 
     <script>
-        /* [JS ZONE] - "Мізки" гри */
-        
-        // 1. Конфігурація - тут ми будемо розширювати параметри
+                // ==========================================
+        // CYBER SICH MASTER ENGINE v3.2 (CORE + WORLD)
+        // ==========================================
+
         const CONFIG = {
             GRID_SIZE: 80,
             PRIMARY: "#00f2ff",
-            SECONDARY: "#fff200"
+            SECONDARY: "#fff200",
+            DANGER: "#ff0055"
         };
 
-        // 2. Ядро Двигуна
         class Engine {
             constructor() {
                 this.canvas = document.getElementById('render-canvas');
                 this.ctx = this.canvas.getContext('2d');
                 this.width = window.innerWidth;
                 this.height = window.innerHeight;
-                this.camera = { x: 0, y: 0, zoom: 1 };
-                this.state = { balance: 0 };
+                
+                // Камера з плавним доведенням (Lerp)
+                this.camera = { x: 0, y: 0, targetX: 0, targetY: 0 };
+                this.isDragging = false;
+                this.lastMouse = { x: 0, y: 0 };
+                
+                // Світ об'єктів
+                this.state = { 
+                    balance: 0,
+                    nodes: [
+                        { id: 'core', x: 0, y: 0, name: 'ЦЕНТРАЛЬНИЙ РЕАКТОР', size: 100, color: CONFIG.PRIMARY },
+                        { id: 'forge', x: -400, y: -250, name: 'КУЗНЯ NFT', size: 70, color: CONFIG.SECONDARY },
+                        { id: 'vault', x: 400, y: 200, name: 'СКАРБНИЦЯ', size: 70, color: CONFIG.DANGER }
+                    ]
+                };
                 this.init();
             }
 
             init() {
                 this.resize();
                 window.addEventListener('resize', () => this.resize());
+                this.setupInputs();
                 this.loop();
+            }
+
+            setupInputs() {
+                const start = (x, y) => { 
+                    this.isDragging = true; 
+                    this.lastMouse = { x, y }; 
+                };
+                const move = (x, y) => {
+                    if (!this.isDragging) return;
+                    this.camera.targetX += x - this.lastMouse.x;
+                    this.camera.targetY += y - this.lastMouse.y;
+                    this.lastMouse = { x, y };
+                };
+                const end = () => { this.isDragging = false; };
+
+                // Підтримка миші та тачскріна
+                this.canvas.addEventListener('mousedown', e => start(e.clientX, e.clientY));
+                window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
+                window.addEventListener('mouseup', end);
+                this.canvas.addEventListener('touchstart', e => start(e.touches[0].clientX, e.touches[0].clientY));
+                canvas.addEventListener('touchmove', e => move(e.touches[0].clientX, e.touches[0].clientY));
+                canvas.addEventListener('touchend', end);
             }
 
             resize() {
@@ -71,36 +108,79 @@
                 const s = CONFIG.GRID_SIZE;
                 this.ctx.strokeStyle = 'rgba(0, 242, 255, 0.05)';
                 this.ctx.lineWidth = 1;
-                for(let x = (this.camera.x % s); x < this.width; x += s) {
+                // Паралакс-ефект для сітки
+                const offsetX = (this.camera.x * 0.3) % s;
+                const offsetY = (this.camera.y * 0.3) % s;
+
+                for(let x = offsetX; x < this.width; x += s) {
                     this.ctx.beginPath(); this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.height); this.ctx.stroke();
                 }
-                for(let y = (this.camera.y % s); y < this.height; y += s) {
+                for(let y = offsetY; y < this.height; y += s) {
                     this.ctx.beginPath(); this.ctx.moveTo(0, y); this.ctx.lineTo(this.width, y); this.ctx.stroke();
                 }
             }
 
+            drawNode(node) {
+                const x = node.x + this.camera.x + this.width/2;
+                const y = node.y + this.camera.y + this.height/2;
+
+                this.ctx.save();
+                this.ctx.shadowBlur = 15;
+                this.ctx.shadowColor = node.color;
+                this.ctx.strokeStyle = node.color;
+                this.ctx.lineWidth = 3;
+
+                // Малюємо основу будівлі
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, y - node.size);
+                this.ctx.lineTo(x + node.size, y);
+                this.ctx.lineTo(x, y + node.size);
+                this.ctx.lineTo(x - node.size, y);
+                this.ctx.closePath();
+                this.ctx.stroke();
+
+                // Декор (внутрішнє коло)
+                this.ctx.setLineDash([5, 10]);
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, node.size/1.5, 0, Math.PI*2);
+                this.ctx.stroke();
+                this.ctx.restore();
+
+                // Текст
+                this.ctx.fillStyle = "#fff";
+                this.ctx.font = "900 12px Orbitron";
+                this.ctx.textAlign = "center";
+                this.ctx.fillText(node.name, x, y + node.size + 30);
+            }
+
             loop() {
-                // Очистка екрану
+                // Плавний рух камери
+                this.camera.x += (this.camera.targetX - this.camera.x) * 0.15;
+                this.camera.y += (this.camera.targetY - this.camera.y) * 0.15;
+
                 this.ctx.fillStyle = '#020205';
                 this.ctx.fillRect(0, 0, this.width, this.height);
 
                 this.drawGrid();
-                
-                // Оновлення балансу (майнінг)
+                this.state.nodes.forEach(n => this.drawNode(n));
+
+                // Оновлення HUD
                 this.state.balance += 0.001;
-                document.getElementById('sich-balance').innerText = this.state.balance.toFixed(2);
+                const balEl = document.getElementById('sich-balance');
+                if(balEl) balEl.innerText = this.state.balance.toFixed(2);
 
                 requestAnimationFrame(() => this.loop());
             }
         }
 
-        // 3. Запуск систем
+        // --- Ініціалізація систем ---
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://cybersich.vercel.app/tonconnect-manifest.json',
             buttonRootId: 'ton-connect'
         });
 
         const Game = new Engine();
+
     </script>
 </body>
 </html>
