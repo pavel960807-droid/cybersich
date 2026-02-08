@@ -1,0 +1,18 @@
+// js/ui_controller.js
+const UI = {
+    showModal(title, content) {
+        Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+        Telegram.WebApp.showPopup({
+            title: title,
+            message: content,
+            buttons: [{type: 'ok', text: 'ЗРОЗУМІЛО'}]
+        });
+    },
+    
+    updateMiningStatus(status) {
+        const el = document.getElementById('sys-status');
+        if(el) el.innerText = status;
+    }
+};
+
+console.log("UI Controller Online.");
