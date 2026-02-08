@@ -1,90 +1,206 @@
-/** * CYBER SICH MASTER ENGINE v2.0
- * Модуль: Рендеринг Світу та Системна Логіка
- * Кількість рядків у фіналі: >10,000 (будемо додавати блоками)
- */
-
-class CyberSich {
-    constructor() {
-        this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
-        this.width = window.innerWidth;
-        this.height = window.innerHeight;
-        this.state = {
-            user: { balance: 0, lp: 0, nfts: [] },
-            world: { buildings: [], particles: [] },
-            camera: { x: 0, y: 0, zoom: 1 }
-        };
-        this.init();
-    }
-
-    init() {
-        this.setupListeners();
-        this.generateWorld();
-        this.gameLoop();
-        console.log("System Initialized: CyberSich Engine Online");
-    }
-
-    // Професійна генерація об'єктів світу
-    generateWorld() {
-        // Координати та властивості будівель (Кузня, Рада, Скарбниця)
-        this.state.world.buildings.push(
-            { id: 'forge', x: 200, y: 300, size: 120, type: 'production', label: 'THE FORGE' },
-            { id: 'council', x: 600, y: 200, size: 150, type: 'staking', label: 'THE COUNCIL' },
-            { id: 'treasury', x: 400, y: 600, size: 100, type: 'lottery', label: 'THE TREASURY' }
-        );
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CYBER SICH | PRO WORLD ENGINE</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
+        body, html { margin: 0; padding: 0; background: #020205; overflow: hidden; height: 100vh; font-family: 'Orbitron', sans-serif; }
+        canvas { display: block; width: 100vw; height: 100vh; }
         
-        // Генерація фонового "шуму" (кіберпанк-атмосфера)
-        for(let i=0; i<50; i++) {
-            this.state.world.particles.push({
-                x: Math.random() * this.width,
-                y: Math.random() * this.height,
-                v: Math.random() * 0.5
-            });
+        /* HUD UI */
+        #ui-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        .hud-top { position: absolute; top: 20px; left: 20px; pointer-events: auto; }
+        .stat-box { background: rgba(0, 242, 255, 0.05); border-left: 3px solid #00f2ff; padding: 10px 20px; backdrop-filter: blur(10px); }
+        .stat-label { font-size: 10px; color: #00f2ff; letter-spacing: 2px; }
+        .stat-value { font-size: 24px; font-weight: 900; color: #fff; }
+        
+        #ton-connect { position: absolute; top: 20px; right: 20px; pointer-events: auto; zoom: 0.8; }
+        
+        .loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; transition: 0.5s; }
+        .loader-bar { width: 200px; height: 2px; background: #111; margin-top: 20px; position: relative; }
+        .loader-fill { width: 0%; height: 100%; background: #00f2ff; box-shadow: 0 0 10px #00f2ff; transition: 0.3s; }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading-screen">
+        <div style="color:#00f2ff; letter-spacing:5px;">CYBER SICH</div>
+        <div class="loader-bar"><div id="fill" class="loader-fill"></div></div>
+    </div>
+
+    <div id="ui-container">
+        <div class="hud-top">
+            <div class="stat-box">
+                <div class="stat-label">CORE_RESERVE</div>
+                <div class="stat-value" id="balance-val">0.00</div>
+            </div>
+        </div>
+        <div id="ton-connect"></div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        /** * CYBER SICH MASTER ENGINE v2.5
+         * Масштабована архітектура для складного ігрового світу
+         */
+        
+        class CyberEngine {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.width = window.innerWidth;
+                this.height = window.innerHeight;
+                this.canvas.width = this.width;
+                this.canvas.height = this.height;
+                
+                this.state = {
+                    balance: 0,
+                    offset: { x: 0, y: 0 },
+                    targetOffset: { x: 0, y: 0 },
+                    zoom: 1,
+                    buildings: [
+                        { id: 'core', x: 0, y: 0, size: 140, name: 'ЦЕНТРАЛЬНИЙ РЕАКТОР', color: '#00f2ff', aura: 40 },
+                        { id: 'forge', x: -300, y: -200, size: 90, name: 'КУЗНЯ NFT', color: '#fff200', aura: 20 },
+                        { id: 'vault', x: 300, y: 200, size: 90, name: 'СКАРБНИЦЯ', color: '#ff0055', aura: 20 }
+                    ],
+                    particles: []
+                };
+                
+                this.init();
+            }
+
+            init() {
+                // Плавний лоадер
+                let p = 0;
+                const interval = setInterval(() => {
+                    p += Math.random() * 20;
+                    document.getElementById('fill').style.width = p + '%';
+                    if(p >= 100) {
+                        clearInterval(interval);
+                        document.getElementById('loading').style.opacity = '0';
+                        setTimeout(() => document.getElementById('loading').remove(), 500);
+                    }
+                }, 100);
+
+                // Генерація атмосферних частинок
+                for(let i=0; i<100; i++) {
+                    this.state.particles.push({
+                        x: Math.random() * 2000 - 1000,
+                        y: Math.random() * 2000 - 1000,
+                        s: Math.random() * 2
+                    });
+                }
+
+                this.animate();
+                this.setupControls();
+            }
+
+            setupControls() {
+                let isDragging = false;
+                let lastPos = { x: 0, y: 0 };
+
+                const start = (x, y) => { isDragging = true; lastPos = { x, y }; };
+                const move = (x, y) => {
+                    if(!isDragging) return;
+                    this.state.offset.x += x - lastPos.x;
+                    this.state.offset.y += y - lastPos.y;
+                    lastPos = { x, y };
+                };
+                const end = () => isDragging = false;
+
+                canvas.addEventListener('mousedown', e => start(e.clientX, e.clientY));
+                window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
+                window.addEventListener('mouseup', end);
+
+                canvas.addEventListener('touchstart', e => start(e.touches[0].clientX, e.touches[0].clientY));
+                canvas.addEventListener('touchmove', e => move(e.touches[0].clientX, e.touches[0].clientY));
+                canvas.addEventListener('touchend', end);
+            }
+
+            drawGrid() {
+                const step = 60;
+                this.ctx.strokeStyle = 'rgba(0, 242, 255, 0.03)';
+                this.ctx.lineWidth = 1;
+                
+                const startX = this.state.offset.x % step;
+                const startY = this.state.offset.y % step;
+
+                for(let x = startX; x < this.width; x += step) {
+                    this.ctx.beginPath(); this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.height); this.ctx.stroke();
+                }
+                for(let y = startY; y < this.height; y += step) {
+                    this.ctx.beginPath(); this.ctx.moveTo(0, y); this.ctx.lineTo(this.width, y); this.ctx.stroke();
+                }
+            }
+
+            drawBuilding(b) {
+                const x = b.x + this.state.offset.x + this.width/2;
+                const y = b.y + this.state.offset.y + this.height/2;
+                
+                // Aura effect
+                const grd = this.ctx.createRadialGradient(x, y, 0, x, y, b.size + b.aura);
+                grd.addColorStop(0, b.color + '22');
+                grd.addColorStop(1, 'transparent');
+                this.ctx.fillStyle = grd;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, b.size + b.aura, 0, Math.PI*2);
+                this.ctx.fill();
+
+                // Isometric Box
+                this.ctx.strokeStyle = b.color;
+                this.ctx.lineWidth = 3;
+                this.ctx.shadowBlur = 15;
+                this.ctx.shadowColor = b.color;
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, y - b.size/2);
+                this.ctx.lineTo(x + b.size, y);
+                this.ctx.lineTo(x, y + b.size/2);
+                this.ctx.lineTo(x - b.size, y);
+                this.ctx.closePath();
+                this.ctx.stroke();
+
+                this.ctx.shadowBlur = 0;
+                this.ctx.fillStyle = "#fff";
+                this.ctx.font = "900 10px Orbitron";
+                this.ctx.textAlign = "center";
+                this.ctx.fillText(b.name, x, y + b.size + 10);
+            }
+
+            animate() {
+                this.ctx.fillStyle = '#020205';
+                this.ctx.fillRect(0, 0, this.width, this.height);
+
+                this.drawGrid();
+                
+                // Draw particles
+                this.ctx.fillStyle = "rgba(0, 242, 255, 0.2)";
+                this.state.particles.forEach(p => {
+                    const px = p.x + this.state.offset.x * 0.5 + this.width/2;
+                    const py = p.y + this.state.offset.y * 0.5 + this.height/2;
+                    this.ctx.fillRect(px, py, p.s, p.s);
+                });
+
+                this.state.buildings.forEach(b => this.drawBuilding(b));
+
+                // Mining balance simulation
+                this.state.balance += 0.001;
+                document.getElementById('balance-val').innerText = this.state.balance.toFixed(2);
+
+                requestAnimationFrame(() => this.animate());
+            }
         }
-    }
 
-    draw() {
-        this.ctx.fillStyle = '#050508';
-        this.ctx.fillRect(0, 0, this.width, this.height);
-        
-        // Малюємо сітку світу (Grid)
-        this.drawGrid();
-        
-        // Малюємо будівлі як складні геометричні об'єкти
-        this.state.world.buildings.forEach(b => {
-            this.drawBuilding(b);
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://cybersich.vercel.app/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect'
         });
 
-        this.drawUI();
-    }
-
-    drawBuilding(b) {
-        let ctx = this.ctx;
-        ctx.strokeStyle = '#00f2ff';
-        ctx.lineWidth = 2;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#00f2ff';
-        
-        // Складна геометрія будівлі (не дитяча картинка)
-        ctx.beginPath();
-        ctx.moveTo(b.x, b.y - b.size/2);
-        ctx.lineTo(b.x + b.size/2, b.y);
-        ctx.lineTo(b.x, b.y + b.size/2);
-        ctx.lineTo(b.x - b.size/2, b.y);
-        ctx.closePath();
-        ctx.stroke();
-        
-        ctx.fillStyle = 'rgba(0, 242, 255, 0.05)';
-        ctx.fill();
-        
-        ctx.fillStyle = '#fff';
-        ctx.font = '10px Orbitron';
-        ctx.fillText(b.label, b.x - 30, b.y + b.size/2 + 20);
-    }
-
-    // Головний цикл гри
-    gameLoop() {
-        this.draw();
-        requestAnimationFrame(() => this.gameLoop());
-    }
-}
+        const engine = new CyberEngine();
+    </script>
+</body>
+</html>
