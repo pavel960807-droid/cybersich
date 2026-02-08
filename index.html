@@ -1,60 +1,175 @@
 <!DOCTYPE html>
-<html>
+<html lang="uk">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CyberSich Economy</title>
+    <title>CYBER SICH: THE CORE</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <style>
-        body { background: #000; color: #00f0ff; font-family: 'Courier New', monospace; text-align: center; margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .box { border: 1px solid #00f0ff; padding: 40px 20px; border-radius: 20px; box-shadow: 0 0 20px #00444a; width: 90%; background: #050505; }
-        .label { font-size: 0.8em; color: #555; text-transform: uppercase; margin-bottom: 5px; }
-        .value { font-size: 2.5em; font-weight: bold; margin-bottom: 30px; text-shadow: 0 0 10px #00f0ff; }
-        .progress-bar { width: 100%; height: 10px; background: #111; border-radius: 5px; margin-bottom: 20px; overflow: hidden; }
-        .fill { height: 100%; background: #00f0ff; width: 0%; transition: width 0.5s; }
-        button { background: #00f0ff; color: #000; border: none; padding: 15px 40px; border-radius: 10px; font-weight: bold; font-size: 1.1em; cursor: pointer; width: 100%; }
-        button:disabled { background: #222; color: #444; }
+        :root { --neon: #00f2ff; --gold: #fff200; --red: #ff0055; --bg: #050508; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; margin: 0; overflow: hidden; height: 100vh; }
+        
+        #game-container { display: flex; flex-direction: column; height: 100vh; padding: 20px; position: relative; background: radial-gradient(circle at center, #101018 0%, #050508 100%); }
+        
+        /* Glass Panels */
+        .panel { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(0, 242, 255, 0.1); border-radius: 16px; padding: 15px; backdrop-filter: blur(10px); margin-bottom: 15px; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .logo { font-size: 18px; font-weight: 900; letter-spacing: 3px; color: var(--neon); text-shadow: 0 0 15px var(--neon); }
+        
+        .balance-main { text-align: center; margin-bottom: 25px; }
+        .balance-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #888; }
+        .balance-value { font-size: 42px; font-weight: 900; color: #fff; margin: 5px 0; font-variant-numeric: tabular-nums; }
+        
+        .grid-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .small-stat { font-size: 11px; color: #ccc; }
+        .small-stat b { color: var(--gold); display: block; font-size: 16px; }
+
+        /* Navigation */
+        .nav-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+        .nav-btn { flex: 1; padding: 12px; border-radius: 10px; border: none; background: rgba(255,255,255,0.05); color: #666; font-weight: 600; font-size: 12px; transition: 0.3s; }
+        .nav-btn.active { background: rgba(0, 242, 255, 0.1); color: var(--neon); border: 1px solid var(--neon); }
+
+        /* Buttons */
+        .btn-main { background: linear-gradient(45deg, var(--neon), #00a2ff); color: #000; border: none; padding: 18px; border-radius: 12px; font-weight: 900; width: 100%; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(0, 242, 255, 0.3); transition: 0.2s; }
+        .btn-main:active { transform: scale(0.98); }
+        .btn-lottery { background: linear-gradient(45deg, var(--gold), #ffaa00); margin-top: 10px; }
+
+        /* NFT Slots */
+        .nft-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; padding-bottom: 20px; }
+        .nft-card { aspect-ratio: 1; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px dashed #333; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; color: #444; }
+        .nft-card.legendary { border: 1px solid var(--gold); color: var(--gold); box-shadow: inset 0 0 10px rgba(255,242,0,0.1); }
+
+        #ton-connect { zoom: 0.8; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <div class="label">CyberSich Wallet</div>
-        <div class="value" id="wallet">0.0 $SICH</div>
-        
-        <div class="label">Mining Progress (0.1 SICH)</div>
-        <div class="progress-bar"><div class="fill" id="fill"></div></div>
-        
-        <button id="btn" onclick="claim()" disabled>WAITING FOR 0.1 SICH...</button>
+    <div id="game-container">
+        <div class="header">
+            <div class="logo">SICH_CORE</div>
+            <div id="ton-connect"></div>
+        </div>
+
+        <div class="balance-main">
+            <div class="balance-label">Available $SICH</div>
+            <div class="balance-value" id="sich-val">0.00</div>
+            <div id="mining-status" style="font-size: 10px; color: var(--neon);">⚡ SYSTEM ACTIVE: 0.1 SICH/CYCLE</div>
+        </div>
+
+        <div class="nav-bar">
+            <button class="nav-btn active" onclick="tab('stake')">STAKING</button>
+            <button class="nav-btn" onclick="tab('lotto')">LOTTERY</button>
+            <button class="nav-btn" onclick="tab('nft')">NFT ARMORY</button>
+        </div>
+
+        <div id="tab-stake" class="tab-content">
+            <div class="panel">
+                <div class="grid-stats">
+                    <div class="small-stat">STAKED TON/SICH <b id="lp-val">0.00</b></div>
+                    <div class="small-stat">MULTIPLIER <b id="mult-val">x1.0</b></div>
+                </div>
+                <button class="btn-main" onclick="doStake()">ADD LIQUIDITY (TON)</button>
+            </div>
+            <p style="font-size: 11px; color: #555; text-align: center;">Стейкінг у парі з TON підвищує шанс випадіння Легендарних NFT до 0.05%</p>
+        </div>
+
+        <div id="tab-lotto" class="tab-content" style="display:none;">
+            <div class="panel">
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <div class="balance-label">JACKPOT</div>
+                    <div style="font-size: 24px; color: var(--gold); font-weight: 900;">4,500 $SICH</div>
+                </div>
+                <button class="btn-main btn-lottery" onclick="buyTicket()">BUY TICKET (10 SICH)</button>
+                <div style="font-size: 10px; color: var(--red); margin-top: 10px; text-align: center;">🔥 20% OF TICKET PRICE WILL BE BURNED</div>
+            </div>
+        </div>
+
+        <div id="tab-nft" class="tab-content" style="display:none; overflow-y: auto;">
+            <div class="nft-container" id="nft-list">
+                </div>
+        </div>
     </div>
 
     <script>
-        let wallet = 0.0;
-        let progress = 0;
-        const btn = document.getElementById('btn');
-        const fill = document.getElementById('fill');
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.enableClosingConfirmation();
 
-        function startMining() {
-            setInterval(() => {
-                if (progress < 100) {
-                    progress += 1; // 1% кожну секунду (разом 100 секунд до 0.1 SICH)
-                    fill.style.width = progress + "%";
-                    if (progress >= 100) {
-                        btn.disabled = false;
-                        btn.innerText = "CLAIM 0.1 SICH";
-                    }
+        // Game State
+        let user = {
+            sich: 0.00,
+            lp: 0.00,
+            mult: 1.0,
+            nfts: []
+        };
+
+        // Initialize TonConnect
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+            manifestUrl: 'https://cybersich.vercel.app/tonconnect-manifest.json',
+            buttonRootId: 'ton-connect'
+        });
+
+        // Core Mining Loop
+        setInterval(() => {
+            let gain = 0.01 * user.mult;
+            user.sich += gain;
+            updateUI();
+        }, 3000);
+
+        function updateUI() {
+            document.getElementById('sich-val').innerText = user.sich.toFixed(2);
+            document.getElementById('lp-val').innerText = user.lp.toFixed(2);
+            document.getElementById('mult-val').innerText = 'x' + user.mult.toFixed(1);
+        }
+
+        function tab(name) {
+            tg.HapticFeedback.impactOccurred('light');
+            document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + name).style.display = 'block';
+            event.currentTarget.classList.add('active');
+        }
+
+        function doStake() {
+            if(!tonConnectUI.connected) {
+                tg.showAlert("Підключи гаманець для стейкінгу!");
+                return;
+            }
+            tg.showConfirm("Створити пару TON/SICH для стейкінгу?", (ok) => {
+                if(ok) {
+                    user.lp += 1.0;
+                    user.mult += 0.5;
+                    tg.HapticFeedback.notificationOccurred('success');
+                    updateUI();
                 }
-            }, 1000); 
+            });
         }
 
-        function claim() {
-            wallet = (parseFloat(wallet) + 0.1).toFixed(1);
-            document.getElementById('wallet').innerText = wallet + " $SICH";
-            progress = 0;
-            fill.style.width = "0%";
-            btn.disabled = true;
-            btn.innerText = "WAITING FOR 0.1 SICH...";
+        function buyTicket() {
+            if(user.sich < 10) {
+                tg.showAlert("Недостатньо SICH! Потрібно 10.");
+                return;
+            }
+            user.sich -= 10;
+            tg.HapticFeedback.impactOccurred('heavy');
+            tg.showPopup({
+                title: 'ЛОТЕРЕЯ',
+                message: 'Квиток придбано! 2 $SICH спалено. Результат через 24 години.',
+                buttons: [{type: 'ok'}]
+            });
+            updateUI();
         }
 
-        startMining();
+        // Fill NFT slots
+        const nftList = document.getElementById('nft-list');
+        for(let i=0; i<12; i++) {
+            let div = document.createElement('div');
+            div.className = 'nft-card';
+            div.innerHTML = '<span>EMPTY</span><small>SLOT</small>';
+            nftList.appendChild(div);
+        }
     </script>
 </body>
 </html>
