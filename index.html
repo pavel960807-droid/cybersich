@@ -3,144 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CYBER SICH: THE ARMORY</title>
+    <title>CYBER SICH: WORLD ENGINE</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <style>
-        :root { --neon: #00f2ff; --gold: #fff200; --rare: #bd00ff; --bg: #050508; }
-        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; overflow: hidden; }
-        #game-container { display: flex; flex-direction: column; height: 100vh; padding: 20px; background: radial-gradient(circle at top, #0a0a15 0%, #050508 100%); }
+        :root { --neon: #00f2ff; --gold: #fff200; --rare: #bd00ff; --bg: #020205; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body, html { margin: 0; padding: 0; background: var(--bg); color: #fff; font-family: 'Orbitron', sans-serif; overflow: hidden; height: 100vh; }
         
-        /* Stats Styling */
-        .panel { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(0, 242, 255, 0.1); border-radius: 16px; padding: 15px; margin-bottom: 12px; }
-        .balance-val { font-size: 38px; font-weight: 900; text-align: center; color: #fff; text-shadow: 0 0 20px rgba(255,255,255,0.2); }
+        #map-canvas { position: absolute; top: 0; left: 0; z-index: 0; }
         
-        /* Tabs */
-        .nav-bar { display: flex; gap: 8px; margin-bottom: 15px; }
-        .nav-btn { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #222; background: #111; color: #555; font-size: 11px; font-weight: bold; }
-        .nav-btn.active { border-color: var(--neon); color: var(--neon); background: rgba(0,242,255,0.05); }
+        .ui-overlay { position: relative; z-index: 10; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+        .ui-element { pointer-events: auto; }
 
-        /* NFT Cards Modern View */
-        .nft-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; overflow-y: auto; max-height: 60vh; padding-bottom: 20px; }
-        .nft-card { background: linear-gradient(135deg, #111 0%, #080808 100%); border: 1px solid #222; border-radius: 12px; padding: 10px; position: relative; overflow: hidden; }
-        .nft-card.legendary { border: 1px solid var(--gold); box-shadow: 0 0 15px rgba(255,242,0,0.15); }
-        .nft-card.rare { border: 1px solid var(--rare); }
-        .nft-rarity { font-size: 8px; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; position: absolute; top: 8px; right: 8px; }
-        
-        .stat-bar { height: 4px; background: #222; border-radius: 2px; margin-top: 5px; overflow: hidden; }
-        .stat-fill { height: 100%; background: var(--neon); width: 0%; transition: 1s; }
+        /* Top Bar */
+        .top-status { background: rgba(0, 0, 0, 0.8); border-bottom: 1px solid var(--neon); padding: 15px; display: flex; justify-content: space-between; backdrop-filter: blur(10px); }
+        .balance-box { text-align: left; }
+        .sich-count { font-size: 24px; font-weight: 900; color: #fff; text-shadow: 0 0 10px var(--neon); }
 
-        .btn-action { background: var(--neon); color: #000; border: none; padding: 16px; border-radius: 12px; font-weight: 900; width: 100%; letter-spacing: 1px; margin-top: 10px; }
-        .btn-lotto { background: var(--gold); }
+        /* Interactive Map Areas */
+        .world-map { flex-grow: 1; position: relative; display: flex; align-items: center; justify-content: center; }
+        .building { position: absolute; border: 1px solid rgba(0, 242, 255, 0.3); background: rgba(0, 242, 255, 0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-direction: column; cursor: pointer; transition: 0.3s; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .building:active { transform: scale(1.1); border-color: var(--neon); background: rgba(0, 242, 255, 0.2); }
+        .building span { font-size: 10px; font-weight: bold; text-transform: uppercase; margin-top: 5px; color: var(--neon); text-shadow: 0 0 5px #000; }
+        
+        /* Specific Buildings Positions */
+        #forge { width: 100px; height: 100px; top: 20%; left: 15%; }
+        #council { width: 120px; height: 120px; top: 40%; right: 10%; border-color: var(--gold); }
+        #treasury { width: 90px; height: 90px; bottom: 25%; left: 25%; }
+
+        /* Bottom Menu */
+        .bottom-nav { background: rgba(0, 0, 0, 0.9); border-top: 1px solid #333; display: flex; justify-content: space-around; padding: 10px; }
+        .nav-item { color: #555; font-size: 10px; text-transform: uppercase; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .nav-item.active { color: var(--neon); }
+
+        /* Modals */
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; background: #0a0a12; border: 1px solid var(--neon); border-radius: 20px; padding: 20px; display: none; z-index: 100; box-shadow: 0 0 50px rgba(0, 242, 255, 0.2); }
+        .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 18px; color: var(--neon); }
+        .close-modal { color: #fff; font-size: 24px; }
+
+        .btn-action { background: var(--neon); color: #000; border: none; padding: 15px; width: 100%; border-radius: 10px; font-weight: 900; text-transform: uppercase; margin-top: 10px; }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="game-container">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <div style="color:var(--neon); font-weight:900; letter-spacing:2px;">SICH_v1.1</div>
-            <div id="ton-connect"></div>
+    <canvas id="map-canvas"></canvas>
+
+    <div class="ui-overlay">
+        <div class="top-status ui-element">
+            <div class="balance-box">
+                <div style="font-size: 10px; color: var(--neon);">SYSTEM_RESERVE</div>
+                <div class="sich-count" id="sich-val">0.00</div>
+            </div>
+            <div id="ton-connect" class="ui-element"></div>
         </div>
 
-        <div class="panel">
-            <div style="text-align:center; font-size:10px; color:#666; letter-spacing:1px;">CORE BALANCE</div>
-            <div class="balance-val" id="sich-val">0.00</div>
-            <div id="mining-anim" style="text-align:center; font-size:10px; color:var(--neon); opacity:0.6;">● MINING ACTIVE</div>
-        </div>
-
-        <div class="nav-bar">
-            <button class="nav-btn active" onclick="setTab('stake', this)">STAKE</button>
-            <button class="nav-btn" onclick="setTab('lotto', this)">LOTTO</button>
-            <button class="nav-btn" onclick="setTab('nft', this)">ARMORY</button>
-        </div>
-
-        <div id="tab-stake" class="tab-content">
-            <div class="panel">
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <span style="font-size:12px; color:#888;">Staked TON/SICH:</span>
-                    <span id="lp-val" style="color:var(--gold); font-weight:bold;">0.00</span>
-                </div>
-                <div style="font-size:10px; color:#555; margin-bottom:15px;">APR: 124.5% + NFT Chance Boost</div>
-                <button class="btn-action" onclick="doStake()">UPGRADE NODE</button>
+        <div class="world-map">
+            <div class="building ui-element" id="forge" onclick="openModal('forge-m')">
+                <img src="https://img.icons8.com/neon/64/null/anvil.png" width="40">
+                <span>Кузня</span>
+            </div>
+            <div class="building ui-element" id="council" onclick="openModal('council-m')">
+                <img src="https://img.icons8.com/neon/64/null/castle.png" width="50">
+                <span>Рада</span>
+            </div>
+            <div class="building ui-element" id="treasury" onclick="openModal('treasury-m')">
+                <img src="https://img.icons8.com/neon/64/null/safe.png" width="40">
+                <span>Скарбниця</span>
             </div>
         </div>
 
-        <div id="tab-lotto" class="tab-content" style="display:none;">
-            <div class="panel">
-                <div style="text-align:center; margin-bottom:15px;">
-                    <div style="font-size:10px; color:#888;">CURRENT JACKPOT</div>
-                    <div style="font-size:24px; color:var(--gold); font-weight:900;">4,500 $SICH</div>
-                </div>
-                <button class="btn-action btn-lotto" onclick="buyTicket()">GET TICKET (10 SICH)</button>
-            </div>
+        <div class="bottom-nav ui-element">
+            <div class="nav-item active"><span>Світ</span></div>
+            <div class="nav-item" onclick="openModal('armory-m')"><span>Арсенал</span></div>
+            <div class="nav-item"><span>Місії</span></div>
         </div>
+    </div>
 
-        <div id="tab-nft" class="tab-content" style="display:none;">
-            <div class="nft-grid" id="nft-list">
-                </div>
+    <div id="forge-m" class="modal ui-element">
+        <div class="modal-header">КУЗНЯ NFT <span class="close-modal" onclick="closeModal()">×</span></div>
+        <p style="font-size: 12px; color: #ccc;">Тут створюються нові цифрові воїни. Чим більше TON у стейкінгу, тим вища якість сталі.</p>
+        <button class="btn-action" onclick="action('forge')">ВИКУВАТИ ЮНІТА</button>
+    </div>
+
+    <div id="council-m" class="modal ui-element">
+        <div class="modal-header">ВЕЛИКА РАДА <span class="close-modal" onclick="closeModal()">×</span></div>
+        <p style="font-size: 12px; color: #ccc;">Стейкінг SICH/TON. Твій внесок у розбудову Січі.</p>
+        <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; margin-bottom: 10px;">
+            <small>Поточний множник: <b style="color:var(--gold)">x1.5</b></small>
         </div>
+        <button class="btn-action" onclick="action('stake')">ДОДАТИ ЛІКВІДНІСТЬ</button>
+    </div>
+
+    <div id="treasury-m" class="modal ui-element">
+        <div class="modal-header">СКАРБНИЦЯ <span class="close-modal" onclick="closeModal()">×</span></div>
+        <p style="font-size: 12px;">Лотерея "Золота Булава". <br>Квиток: 10 SICH. <br>Банк: 4500 SICH</p>
+        <button class="btn-action" style="background: var(--gold);" onclick="action('lotto')">КУПИТИ КВИТОК</button>
+    </div>
+
+    <div id="armory-m" class="modal ui-element">
+        <div class="modal-header">АРСЕНАЛ <span class="close-modal" onclick="closeModal()">×</span></div>
+        <div id="nft-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 300px; overflow-y: auto;">
+            </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        let state = { sich: 100.0, lp: 0.0, mult: 1.0, nfts: [] };
+        // Canvas Background Logic (Digital Rain)
+        const canvas = document.getElementById('map-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$';
+        const fontSize = 10;
+        const columns = canvas.width / fontSize;
+        const drops = Array(Math.floor(columns)).fill(1);
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(2, 2, 5, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#00f2ff33';
+            ctx.font = fontSize + 'px Orbitron';
+            for (let i = 0; i < drops.length; i++) {
+                const text = characters.charAt(Math.floor(Math.random() * characters.length));
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            }
+        }
+        setInterval(drawMatrix, 50);
+
+        // Game State
+        let state = { sich: 100.0, inventory: [] };
 
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
             manifestUrl: 'https://cybersich.vercel.app/tonconnect-manifest.json',
             buttonRootId: 'ton-connect'
         });
 
-        // Mining Engine
+        // UI Logic
+        function openModal(id) {
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+            document.getElementById(id).style.display = 'block';
+            tg.HapticFeedback.impactOccurred('medium');
+        }
+
+        function closeModal() {
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        }
+
+        function action(type) {
+            if(type === 'stake') {
+                tg.showConfirm("Підключити TON до реактора?", (ok) => { if(ok) tg.HapticFeedback.notificationOccurred('success'); });
+            }
+            if(type === 'lotto') {
+                if(state.sich >= 10) { state.sich -= 10; tg.showAlert("Квиток у Скарбниці!"); }
+            }
+            closeModal();
+        }
+
         setInterval(() => {
-            state.sich += (0.005 * state.mult);
+            state.sich += 0.01;
             document.getElementById('sich-val').innerText = state.sich.toFixed(2);
         }, 1000);
-
-        function setTab(name, el) {
-            tg.HapticFeedback.impactOccurred('light');
-            document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('tab-' + name).style.display = 'block';
-            el.classList.add('active');
-            if(name === 'nft') renderNFTs();
-        }
-
-        function doStake() {
-            if(!tonConnectUI.connected) return tg.showAlert("Connect Wallet!");
-            state.lp += 1.0; state.mult += 0.2;
-            document.getElementById('lp-val').innerText = state.lp.toFixed(2);
-            tg.HapticFeedback.notificationOccurred('success');
-        }
-
-        function buyTicket() {
-            if(state.sich < 10) return tg.showAlert("Low SICH!");
-            state.sich -= 10;
-            tg.HapticFeedback.impactOccurred('heavy');
-            tg.showPopup({title:'Lotto', message:'Ticket active. 2 SICH burned.'});
-        }
-
-        function renderNFTs() {
-            const list = document.getElementById('nft-list');
-            list.innerHTML = '';
-            const demoNFTs = [
-                {name: 'Джура #04', rare: 'common', p: 40},
-                {name: 'Отаман #01', rare: 'legendary', p: 95},
-                {name: 'Характерник', rare: 'rare', p: 70}
-            ];
-            demoNFTs.forEach(n => {
-                let card = document.createElement('div');
-                card.className = `nft-card ${n.rare}`;
-                card.innerHTML = `
-                    <div class="nft-rarity" style="background:${n.rare==='legendary'?'#fff200':'#222'}; color:#000">${n.rare}</div>
-                    <div style="font-size:12px; font-weight:bold; margin-bottom:10px;">${n.name}</div>
-                    <div style="font-size:9px; color:#666;">POWER: ${n.p}%</div>
-                    <div class="stat-bar"><div class="stat-fill" style="width:${n.p}%"></div></div>
-                `;
-                list.appendChild(card);
-            });
-        }
     </script>
 </body>
 </html>
-
