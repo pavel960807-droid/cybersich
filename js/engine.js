@@ -1,4 +1,4 @@
-// js/engine.js (Version 2.0 - Rendering & Interaction)
+// js/engine.js (Version 3.0 - Multi-Node World)
 class SichEngine {
     constructor() {
         this.canvas = document.getElementById('game-canvas');
@@ -8,7 +8,6 @@ class SichEngine {
         
         this.camera = { x: 0, y: 0 };
         this.balance = 0;
-        
         this.init();
     }
 
@@ -17,42 +16,69 @@ class SichEngine {
         this.canvas.height = this.height;
         this.loop();
         
-        // Починаємо видобуток SICH
         setInterval(() => {
             this.balance += CONFIG.MINING_RATE;
             document.getElementById('bal-val').innerText = this.balance.toFixed(3);
         }, 1000);
+
+        // Додаємо базову взаємодію (можна буде рухати карту пізніше)
+        window.addEventListener('resize', () => {
+            this.width = window.innerWidth;
+            this.height = window.innerHeight;
+            this.canvas.width = this.width;
+            this.canvas.height = this.height;
+        });
     }
 
-    drawReactor() {
+    drawReactor(x, y) {
         const ctx = this.ctx;
-        const centerX = this.width / 2 + this.camera.x;
-        const centerY = this.height / 2 + this.camera.y;
         const time = Date.now() * 0.002;
-
-        // Ефект неонового пульсування
         ctx.save();
-        ctx.shadowBlur = 20 + Math.sin(time) * 10;
+        ctx.shadowBlur = 15 + Math.sin(time) * 10;
         ctx.shadowColor = CONFIG.PRIMARY_COLOR;
         ctx.strokeStyle = CONFIG.PRIMARY_COLOR;
         ctx.lineWidth = 3;
-
-        // Малюємо основне ядро
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 60 + Math.sin(time) * 5, 0, Math.PI * 2);
+        ctx.arc(x, y, 50 + Math.sin(time) * 5, 0, Math.PI * 2);
         ctx.stroke();
-
-        // Малюємо орбіти навколо реактора
-        ctx.setLineDash([10, 20]);
+        ctx.setLineDash([5, 15]);
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 100, time, time + Math.PI * 1.5);
+        ctx.arc(x, y, 80, time, time + Math.PI);
         ctx.stroke();
         ctx.restore();
+        this.drawLabel("CORE_REACTOR", x, y + 110);
+    }
 
-        ctx.fillStyle = "#fff";
-        ctx.font = "12px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText("CORE_REACTOR_STAKING", centerX, centerY + 140);
+    drawForge(x, y) {
+        const ctx = this.ctx;
+        const time = Date.now() * 0.002;
+        ctx.save();
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = CONFIG.SECONDARY_COLOR;
+        ctx.strokeStyle = CONFIG.SECONDARY_COLOR;
+        ctx.lineWidth = 2;
+        
+        // Малюємо ізометричну форму кузні (ромб/кристал)
+        ctx.beginPath();
+        ctx.moveTo(x, y - 40 - Math.sin(time)*5);
+        ctx.lineTo(x + 40, y);
+        ctx.lineTo(x, y + 40 + Math.sin(time)*5);
+        ctx.lineTo(x - 40, y);
+        ctx.closePath();
+        ctx.stroke();
+        
+        // Внутрішній ефект "вогню"
+        ctx.fillStyle = "rgba(255, 242, 0, 0.1)";
+        ctx.fill();
+        ctx.restore();
+        this.drawLabel("NFT_FORGE", x, y + 70);
+    }
+
+    drawLabel(text, x, y) {
+        this.ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+        this.ctx.font = "9px Orbitron, monospace";
+        this.ctx.textAlign = "center";
+        this.ctx.fillText(text, x, y);
     }
 
     loop() {
@@ -60,18 +86,24 @@ class SichEngine {
         this.ctx.fillRect(0, 0, this.width, this.height);
         
         this.drawGrid();
-        this.drawReactor();
+        
+        // Центр світу
+        const cx = this.width / 2 + this.camera.x;
+        const cy = this.height / 2 + this.camera.y;
+
+        this.drawReactor(cx, cy);             // Реактор у центрі
+        this.drawForge(cx - 250, cy - 150);   // Кузня зміщена вліво-вгору
         
         requestAnimationFrame(() => this.loop());
     }
 
     drawGrid() {
         const s = CONFIG.GRID_SIZE;
-        this.ctx.strokeStyle = 'rgba(0, 242, 255, 0.03)';
-        for(let x = 0; x < this.width; x += s) {
+        this.ctx.strokeStyle = 'rgba(0, 242, 255, 0.02)';
+        for(let x = (this.camera.x % s); x < this.width; x += s) {
             this.ctx.beginPath(); this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.height); this.ctx.stroke();
         }
-        for(let y = 0; y < this.height; y += s) {
+        for(let y = (this.camera.y % s); y < this.height; y += s) {
             this.ctx.beginPath(); this.ctx.moveTo(0, y); this.ctx.lineTo(this.width, y); this.ctx.stroke();
         }
     }
