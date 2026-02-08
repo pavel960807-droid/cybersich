@@ -1,174 +1,90 @@
-<!DOCTYPE html>
-<html lang="uk">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CYBER SICH: WORLD ENGINE</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-    <style>
-        :root { --neon: #00f2ff; --gold: #fff200; --rare: #bd00ff; --bg: #020205; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body, html { margin: 0; padding: 0; background: var(--bg); color: #fff; font-family: 'Orbitron', sans-serif; overflow: hidden; height: 100vh; }
+/** * CYBER SICH MASTER ENGINE v2.0
+ * Модуль: Рендеринг Світу та Системна Логіка
+ * Кількість рядків у фіналі: >10,000 (будемо додавати блоками)
+ */
+
+class CyberSich {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
+        this.state = {
+            user: { balance: 0, lp: 0, nfts: [] },
+            world: { buildings: [], particles: [] },
+            camera: { x: 0, y: 0, zoom: 1 }
+        };
+        this.init();
+    }
+
+    init() {
+        this.setupListeners();
+        this.generateWorld();
+        this.gameLoop();
+        console.log("System Initialized: CyberSich Engine Online");
+    }
+
+    // Професійна генерація об'єктів світу
+    generateWorld() {
+        // Координати та властивості будівель (Кузня, Рада, Скарбниця)
+        this.state.world.buildings.push(
+            { id: 'forge', x: 200, y: 300, size: 120, type: 'production', label: 'THE FORGE' },
+            { id: 'council', x: 600, y: 200, size: 150, type: 'staking', label: 'THE COUNCIL' },
+            { id: 'treasury', x: 400, y: 600, size: 100, type: 'lottery', label: 'THE TREASURY' }
+        );
         
-        #map-canvas { position: absolute; top: 0; left: 0; z-index: 0; }
-        
-        .ui-overlay { position: relative; z-index: 10; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
-        .ui-element { pointer-events: auto; }
-
-        /* Top Bar */
-        .top-status { background: rgba(0, 0, 0, 0.8); border-bottom: 1px solid var(--neon); padding: 15px; display: flex; justify-content: space-between; backdrop-filter: blur(10px); }
-        .balance-box { text-align: left; }
-        .sich-count { font-size: 24px; font-weight: 900; color: #fff; text-shadow: 0 0 10px var(--neon); }
-
-        /* Interactive Map Areas */
-        .world-map { flex-grow: 1; position: relative; display: flex; align-items: center; justify-content: center; }
-        .building { position: absolute; border: 1px solid rgba(0, 242, 255, 0.3); background: rgba(0, 242, 255, 0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-direction: column; cursor: pointer; transition: 0.3s; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        .building:active { transform: scale(1.1); border-color: var(--neon); background: rgba(0, 242, 255, 0.2); }
-        .building span { font-size: 10px; font-weight: bold; text-transform: uppercase; margin-top: 5px; color: var(--neon); text-shadow: 0 0 5px #000; }
-        
-        /* Specific Buildings Positions */
-        #forge { width: 100px; height: 100px; top: 20%; left: 15%; }
-        #council { width: 120px; height: 120px; top: 40%; right: 10%; border-color: var(--gold); }
-        #treasury { width: 90px; height: 90px; bottom: 25%; left: 25%; }
-
-        /* Bottom Menu */
-        .bottom-nav { background: rgba(0, 0, 0, 0.9); border-top: 1px solid #333; display: flex; justify-content: space-around; padding: 10px; }
-        .nav-item { color: #555; font-size: 10px; text-transform: uppercase; display: flex; flex-direction: column; align-items: center; gap: 5px; }
-        .nav-item.active { color: var(--neon); }
-
-        /* Modals */
-        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; background: #0a0a12; border: 1px solid var(--neon); border-radius: 20px; padding: 20px; display: none; z-index: 100; box-shadow: 0 0 50px rgba(0, 242, 255, 0.2); }
-        .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 18px; color: var(--neon); }
-        .close-modal { color: #fff; font-size: 24px; }
-
-        .btn-action { background: var(--neon); color: #000; border: none; padding: 15px; width: 100%; border-radius: 10px; font-weight: 900; text-transform: uppercase; margin-top: 10px; }
-    </style>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap" rel="stylesheet">
-</head>
-<body>
-    <canvas id="map-canvas"></canvas>
-
-    <div class="ui-overlay">
-        <div class="top-status ui-element">
-            <div class="balance-box">
-                <div style="font-size: 10px; color: var(--neon);">SYSTEM_RESERVE</div>
-                <div class="sich-count" id="sich-val">0.00</div>
-            </div>
-            <div id="ton-connect" class="ui-element"></div>
-        </div>
-
-        <div class="world-map">
-            <div class="building ui-element" id="forge" onclick="openModal('forge-m')">
-                <img src="https://img.icons8.com/neon/64/null/anvil.png" width="40">
-                <span>Кузня</span>
-            </div>
-            <div class="building ui-element" id="council" onclick="openModal('council-m')">
-                <img src="https://img.icons8.com/neon/64/null/castle.png" width="50">
-                <span>Рада</span>
-            </div>
-            <div class="building ui-element" id="treasury" onclick="openModal('treasury-m')">
-                <img src="https://img.icons8.com/neon/64/null/safe.png" width="40">
-                <span>Скарбниця</span>
-            </div>
-        </div>
-
-        <div class="bottom-nav ui-element">
-            <div class="nav-item active"><span>Світ</span></div>
-            <div class="nav-item" onclick="openModal('armory-m')"><span>Арсенал</span></div>
-            <div class="nav-item"><span>Місії</span></div>
-        </div>
-    </div>
-
-    <div id="forge-m" class="modal ui-element">
-        <div class="modal-header">КУЗНЯ NFT <span class="close-modal" onclick="closeModal()">×</span></div>
-        <p style="font-size: 12px; color: #ccc;">Тут створюються нові цифрові воїни. Чим більше TON у стейкінгу, тим вища якість сталі.</p>
-        <button class="btn-action" onclick="action('forge')">ВИКУВАТИ ЮНІТА</button>
-    </div>
-
-    <div id="council-m" class="modal ui-element">
-        <div class="modal-header">ВЕЛИКА РАДА <span class="close-modal" onclick="closeModal()">×</span></div>
-        <p style="font-size: 12px; color: #ccc;">Стейкінг SICH/TON. Твій внесок у розбудову Січі.</p>
-        <div style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; margin-bottom: 10px;">
-            <small>Поточний множник: <b style="color:var(--gold)">x1.5</b></small>
-        </div>
-        <button class="btn-action" onclick="action('stake')">ДОДАТИ ЛІКВІДНІСТЬ</button>
-    </div>
-
-    <div id="treasury-m" class="modal ui-element">
-        <div class="modal-header">СКАРБНИЦЯ <span class="close-modal" onclick="closeModal()">×</span></div>
-        <p style="font-size: 12px;">Лотерея "Золота Булава". <br>Квиток: 10 SICH. <br>Банк: 4500 SICH</p>
-        <button class="btn-action" style="background: var(--gold);" onclick="action('lotto')">КУПИТИ КВИТОК</button>
-    </div>
-
-    <div id="armory-m" class="modal ui-element">
-        <div class="modal-header">АРСЕНАЛ <span class="close-modal" onclick="closeModal()">×</span></div>
-        <div id="nft-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-height: 300px; overflow-y: auto;">
-            </div>
-    </div>
-
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-
-        // Canvas Background Logic (Digital Rain)
-        const canvas = document.getElementById('map-canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$';
-        const fontSize = 10;
-        const columns = canvas.width / fontSize;
-        const drops = Array(Math.floor(columns)).fill(1);
-
-        function drawMatrix() {
-            ctx.fillStyle = 'rgba(2, 2, 5, 0.05)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#00f2ff33';
-            ctx.font = fontSize + 'px Orbitron';
-            for (let i = 0; i < drops.length; i++) {
-                const text = characters.charAt(Math.floor(Math.random() * characters.length));
-                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
-                drops[i]++;
-            }
+        // Генерація фонового "шуму" (кіберпанк-атмосфера)
+        for(let i=0; i<50; i++) {
+            this.state.world.particles.push({
+                x: Math.random() * this.width,
+                y: Math.random() * this.height,
+                v: Math.random() * 0.5
+            });
         }
-        setInterval(drawMatrix, 50);
+    }
 
-        // Game State
-        let state = { sich: 100.0, inventory: [] };
-
-        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: 'https://cybersich.vercel.app/tonconnect-manifest.json',
-            buttonRootId: 'ton-connect'
+    draw() {
+        this.ctx.fillStyle = '#050508';
+        this.ctx.fillRect(0, 0, this.width, this.height);
+        
+        // Малюємо сітку світу (Grid)
+        this.drawGrid();
+        
+        // Малюємо будівлі як складні геометричні об'єкти
+        this.state.world.buildings.forEach(b => {
+            this.drawBuilding(b);
         });
 
-        // UI Logic
-        function openModal(id) {
-            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-            document.getElementById(id).style.display = 'block';
-            tg.HapticFeedback.impactOccurred('medium');
-        }
+        this.drawUI();
+    }
 
-        function closeModal() {
-            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-        }
+    drawBuilding(b) {
+        let ctx = this.ctx;
+        ctx.strokeStyle = '#00f2ff';
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#00f2ff';
+        
+        // Складна геометрія будівлі (не дитяча картинка)
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y - b.size/2);
+        ctx.lineTo(b.x + b.size/2, b.y);
+        ctx.lineTo(b.x, b.y + b.size/2);
+        ctx.lineTo(b.x - b.size/2, b.y);
+        ctx.closePath();
+        ctx.stroke();
+        
+        ctx.fillStyle = 'rgba(0, 242, 255, 0.05)';
+        ctx.fill();
+        
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px Orbitron';
+        ctx.fillText(b.label, b.x - 30, b.y + b.size/2 + 20);
+    }
 
-        function action(type) {
-            if(type === 'stake') {
-                tg.showConfirm("Підключити TON до реактора?", (ok) => { if(ok) tg.HapticFeedback.notificationOccurred('success'); });
-            }
-            if(type === 'lotto') {
-                if(state.sich >= 10) { state.sich -= 10; tg.showAlert("Квиток у Скарбниці!"); }
-            }
-            closeModal();
-        }
-
-        setInterval(() => {
-            state.sich += 0.01;
-            document.getElementById('sich-val').innerText = state.sich.toFixed(2);
-        }, 1000);
-    </script>
-</body>
-</html>
+    // Головний цикл гри
+    gameLoop() {
+        this.draw();
+        requestAnimationFrame(() => this.gameLoop());
+    }
+}
