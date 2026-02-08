@@ -3,230 +3,290 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CYBER SICH | TITAN UNIVERSE</title>
+    <title>CYBER SICH | OVERLORD EDITION</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono&display=swap');
         
-        :root { --neon: #00f2ff; --gold: #fff200; --red: #ff0055; --bg: #020205; }
+        :root { --n: #00f2ff; --g: #fff200; --r: #ff0055; --bg: #020205; --card: rgba(10, 10, 20, 0.9); }
         
-        body, html { margin: 0; padding: 0; background: var(--bg); color: #fff; font-family: 'Orbitron', sans-serif; overflow: hidden; height: 100vh; user-select: none; }
+        body, html { margin: 0; padding: 0; background: var(--bg); color: #fff; font-family: 'Orbitron', sans-serif; overflow: hidden; height: 100vh; }
+        #c { display: block; width: 100vw; height: 100vh; position: absolute; z-index: 1; touch-action: none; }
         
-        #game-canvas { display: block; width: 100vw; height: 100vh; position: absolute; z-index: 1; }
-        
-        .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; }
+        /* UI HUD */
+        .ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; }
         .interactive { pointer-events: auto; }
 
-        /* HUD Styling */
-        .top-hud { padding: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
-        .stats-panel { background: rgba(0, 242, 255, 0.05); border-left: 4px solid var(--neon); padding: 15px 25px; backdrop-filter: blur(15px); box-shadow: 0 0 30px rgba(0,0,0,0.5); }
-        .label { font-size: 10px; color: var(--neon); letter-spacing: 3px; font-weight: 700; }
-        .val { font-size: 28px; font-weight: 900; color: #fff; margin-top: 5px; font-variant-numeric: tabular-nums; }
+        .header { padding: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .stats { background: var(--card); border-left: 4px solid var(--n); padding: 15px; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 0 8px 8px 0; }
+        .label { font-size: 10px; color: var(--n); letter-spacing: 2px; font-weight: 700; font-family: 'Space Mono'; }
+        .val { font-size: 26px; font-weight: 900; color: #fff; margin-top: 5px; }
 
-        /* Complex Modal System */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
-        .modal { width: 85%; background: #0a0a15; border: 1px solid var(--neon); border-radius: 2px; padding: 30px; position: relative; box-shadow: 0 0 50px rgba(0,242,255,0.15); animation: open 0.3s ease-out; }
-        @keyframes open { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        /* Navigation Bar */
+        .nav { margin-top: auto; background: rgba(0,0,0,0.8); border-top: 1px solid rgba(0,242,255,0.2); display: flex; padding: 10px; justify-content: space-around; backdrop-filter: blur(10px); }
+        .nav-btn { color: #555; text-align: center; font-size: 9px; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: 0.3s; padding: 10px; }
+        .nav-btn.active { color: var(--n); text-shadow: 0 0 10px var(--n); }
+
+        /* Modals & Menus */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
+        .m { width: 90%; max-width: 400px; background: #05050a; border: 1px solid var(--n); padding: 25px; position: relative; box-shadow: 0 0 40px rgba(0,242,255,0.1); }
+        .m-h { font-size: 18px; font-weight: 900; color: var(--n); margin-bottom: 15px; border-bottom: 1px solid #111; padding-bottom: 10px; }
+        .m-b { font-size: 11px; line-height: 1.6; color: #888; margin-bottom: 20px; font-family: 'Space Mono'; }
         
-        .modal-h { font-size: 20px; font-weight: 900; color: var(--neon); margin-bottom: 20px; border-bottom: 1px solid rgba(0,242,255,0.3); padding-bottom: 10px; }
-        .btn { background: var(--neon); color: #000; border: none; padding: 15px; width: 100%; font-family: 'Orbitron'; font-weight: 900; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; margin-top: 20px; transition: 0.2s; }
-        .btn:active { background: #fff; transform: translateY(2px); }
+        .grid-nft { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-height: 300px; overflow-y: auto; }
+        .nft-slot { aspect-ratio: 1; background: #0a0a10; border: 1px dashed #222; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #333; }
+        
+        .action-btn { background: var(--n); color: #000; border: none; padding: 15px; width: 100%; font-family: 'Orbitron'; font-weight: 900; text-transform: uppercase; cursor: pointer; letter-spacing: 1px; }
+        .action-btn:active { transform: scale(0.98); background: #fff; }
 
-        #ton-connect { zoom: 0.9; }
+        #ton-connect { zoom: 0.85; border: 1px solid rgba(0,242,255,0.2); border-radius: 8px; overflow: hidden; }
     </style>
 </head>
 <body>
 
-    <canvas id="game-canvas"></canvas>
+<canvas id="c"></canvas>
 
-    <div class="ui-layer">
-        <div class="top-hud">
-            <div class="stats-panel interactive">
-                <div class="label">SICH_CORE_RESERVE</div>
-                <div class="val" id="balance">0.00</div>
-            </div>
-            <div id="ton-connect" class="interactive"></div>
+<div class="ui">
+    <div class="header">
+        <div class="stats interactive">
+            <div class="label">SICH_CORE_STABILITY</div>
+            <div class="val" id="bal">0.00</div>
+            <div style="font-size: 8px; color: #444; margin-top: 5px;">GEN_RATE: 0.005/SEC</div>
         </div>
-
-        <div style="padding: 30px; text-align: center; color: rgba(255,255,255,0.2); font-size: 9px; letter-spacing: 2px;">
-            OPERATIONAL TERMINAL v4.0.1 // NEURAL LINK ACTIVE
-        </div>
+        <div id="ton-connect" class="interactive"></div>
     </div>
 
-    <div id="m-forge" class="modal-overlay interactive" onclick="this.style.display='none'">
-        <div class="modal" onclick="event.stopPropagation()">
-            <div class="modal-h">ЦЕХ NFT КУЗНІ</div>
-            <p style="font-size: 12px; line-height: 1.6; color: #aaa;">Протокол створення бойових одиниць. Використовуйте енергію $SICH для кування рандомних юнітів (Common, Rare, Legendary).</p>
-            <button class="btn" onclick="forgeAction()">ВИКУВАТИ (100 SICH)</button>
-        </div>
+    <div class="nav interactive">
+        <div class="nav-btn active" onclick="goHome()">MAP_VIEW</div>
+        <div class="nav-btn" onclick="openM('inventory')">ARMORY</div>
+        <div class="nav-btn" onclick="openM('quests')">MISSIONS</div>
+        <div class="nav-btn" onclick="openM('settings')">SYSTEM</div>
     </div>
+</div>
 
-    <script>
-        const CONFIG = {
-            GRID: 120,
-            PRIMARY: "#00f2ff",
-            GOLD: "#fff200",
-            RED: "#ff0055",
-            STAMINA_DECAY: 0.005
-        };
+<div id="ov" class="overlay interactive" onclick="closeM()">
+    <div class="m" onclick="event.stopPropagation()">
+        <div id="m-title" class="m-h">SYSTEM_MESSAGE</div>
+        <div id="m-body" class="m-b">Initializing link...</div>
+        <div id="m-extra"></div>
+        <button class="action-btn" onclick="closeM()">CLOSE_TERMINAL</button>
+    </div>
+</div>
 
-        class GameWorld {
-            constructor() {
-                this.canvas = document.getElementById('game-canvas');
-                this.ctx = this.canvas.getContext('2d');
-                this.width = window.innerWidth;
-                this.height = window.innerHeight;
-                
-                this.cam = { x: 0, y: 0, tX: 0, tY: 0 };
-                this.drag = { is: false, x: 0, y: 0 };
-                
-                this.state = {
-                    bal: 150.00,
-                    objs: [
-                        { id: 'core', x: 0, y: 0, t: 'РЕАКТОР', s: 130, c: CONFIG.PRIMARY, fx: true },
-                        { id: 'forge', x: -500, y: -350, t: 'NFT КУЗНЯ', s: 80, c: CONFIG.GOLD, fx: false },
-                        { id: 'vault', x: 500, y: 300, t: 'СКАРБНИЦЯ', s: 85, c: CONFIG.RED, fx: false }
-                    ],
-                    stars: Array.from({length: 80}, () => ({
-                        x: Math.random() * 3000 - 1500,
-                        y: Math.random() * 3000 - 1500,
-                        v: Math.random() * 3 + 1
-                    }))
-                };
-                this.init();
-            }
+<script>
+    /**
+     * CYBER SICH ARCHITECTURE v5.0
+     * Built for high-performance mobile WebApps
+     */
+     
+    const APP = Telegram.WebApp;
+    APP.expand();
+    APP.enableClosingConfirmation();
 
-            init() {
-                this.resize();
-                window.addEventListener('resize', () => this.resize());
-                this.inputs();
-                this.render();
-            }
+    
 
-            resize() {
-                this.width = window.innerWidth;
-                this.height = window.innerHeight;
-                this.canvas.width = this.width;
-                this.canvas.height = this.height;
-            }
+    const CFG = {
+        GRID: 100,
+        N: "#00f2ff",
+        G: "#fff200",
+        R: "#ff0055",
+        SICH_PER_SEC: 0.005
+    };
 
-            inputs() {
-                const s = (x, y) => { this.drag.is = true; this.drag.x = x; this.drag.y = y; };
-                const m = (x, y) => {
-                    if (!this.drag.is) return;
-                    this.cam.tX += x - this.drag.x;
-                    this.cam.tY += y - this.drag.y;
-                    this.drag.x = x; this.drag.y = y;
-                };
-                const e = () => {
-                    if(this.drag.is) this.checkClicks();
-                    this.drag.is = false;
-                };
+    class SichEngine {
+        constructor() {
+            this.can = document.getElementById('c');
+            this.ctx = this.can.getContext('2d');
+            this.w = window.innerWidth;
+            this.h = window.innerHeight;
+            
+            this.cam = { x: 0, y: 0, tx: 0, ty: 0, z: 1 };
+            this.drag = { is: false, x: 0, y: 0 };
+            
+            this.user = { bal: 0, nfts: 0, multiplier: 1 };
+            
+            this.nodes = [
+                { id: 'core', x: 0, y: 0, name: 'CENTRAL_REACTOR', size: 100, color: CFG.N, desc: 'Генератор енергії Січі. Стейкайте TON тут.' },
+                { id: 'forge', x: -500, y: -300, name: 'NFT_FORGE', size: 70, color: CFG.G, desc: 'Тут куються Легендарні Козаки.' },
+                { id: 'vault', x: 500, y: 300, name: 'LOTTO_VAULT', size: 70, color: CFG.R, desc: 'Протокол спалювання та розіграшів.' }
+            ];
 
-                this.canvas.addEventListener('mousedown', ev => s(ev.clientX, ev.clientY));
-                window.addEventListener('mousemove', ev => m(ev.clientX, ev.clientY));
-                window.addEventListener('mouseup', e);
-                this.canvas.addEventListener('touchstart', ev => s(ev.touches[0].clientX, ev.touches[0].clientY));
-                this.canvas.addEventListener('touchmove', ev => m(ev.touches[0].clientX, ev.touches[0].clientY));
-                this.canvas.addEventListener('touchend', e);
-            }
+            this.dust = Array.from({length: 60}, () => ({
+                x: Math.random() * 4000 - 2000,
+                y: Math.random() * 4000 - 2000,
+                s: Math.random() * 2 + 1,
+                o: Math.random()
+            }));
 
-            checkClicks() {
-                // Логіка кліку по будівлях
-                this.state.objs.forEach(o => {
-                    const dx = (o.x + this.cam.x + this.width/2) - this.drag.x;
-                    const dy = (o.y + this.cam.y + this.height/2) - this.drag.y;
-                    if(Math.sqrt(dx*dx + dy*dy) < o.s) {
-                        if(o.id === 'forge') document.getElementById('m-forge').style.display='flex';
-                        Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
-                    }
-                });
-            }
+            this.init();
+        }
 
-            drawBackground() {
-                this.ctx.fillStyle = '#020205';
-                this.ctx.fillRect(0, 0, this.width, this.height);
-                
-                const s = CONFIG.GRID;
-                this.ctx.strokeStyle = 'rgba(0, 242, 255, 0.03)';
-                this.ctx.lineWidth = 1;
-                for(let x = (this.cam.x * 0.4) % s; x < this.width; x += s) {
-                    this.ctx.beginPath(); this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.height); this.ctx.stroke();
+        init() {
+            this.resize();
+            window.addEventListener('resize', () => this.resize());
+            this.ctrls();
+            this.loop();
+        }
+
+        resize() {
+            this.w = window.innerWidth;
+            this.h = window.innerHeight;
+            this.can.width = this.w;
+            this.can.height = this.h;
+        }
+
+        ctrls() {
+            const s = (x, y) => { this.drag.is = true; this.drag.x = x; this.drag.y = y; };
+            const m = (x, y) => {
+                if (!this.drag.is) return;
+                this.cam.tx += x - this.drag.x;
+                this.cam.ty += y - this.drag.y;
+                this.drag.x = x; this.drag.y = y;
+            };
+            const e = () => {
+                if(this.drag.is) this.handleClick();
+                this.drag.is = false;
+            };
+
+            this.can.addEventListener('mousedown', ev => s(ev.clientX, ev.clientY));
+            window.addEventListener('mousemove', ev => m(ev.clientX, ev.clientY));
+            window.addEventListener('mouseup', e);
+            this.can.addEventListener('touchstart', ev => s(ev.touches[0].clientX, ev.touches[0].clientY));
+            this.can.addEventListener('touchmove', ev => m(ev.touches[0].clientX, ev.touches[0].clientY));
+            this.can.addEventListener('touchend', e);
+        }
+
+        handleClick() {
+            this.nodes.forEach(n => {
+                const nx = n.x + this.cam.x + this.w/2;
+                const ny = n.y + this.cam.y + this.h/2;
+                const d = Math.hypot(this.drag.x - nx, this.drag.y - ny);
+                if(d < n.size + 20) {
+                    this.triggerNode(n);
                 }
-                for(let y = (this.cam.y * 0.4) % s; y < this.height; y += s) {
-                    this.ctx.beginPath(); this.ctx.moveTo(0, y); this.ctx.lineTo(this.width, y); this.ctx.stroke();
-                }
+            });
+        }
+
+        triggerNode(n) {
+            APP.HapticFeedback.impactOccurred('medium');
+            openM('node', n);
+        }
+
+        drawGrid() {
+            this.ctx.strokeStyle = 'rgba(0, 242, 255, 0.05)';
+            this.ctx.lineWidth = 1;
+            const step = CFG.GRID;
+            const ox = (this.cam.x * 0.3) % step;
+            const oy = (this.cam.y * 0.3) % step;
+
+            for(let x = ox; x < this.w; x += step) {
+                this.ctx.beginPath(); this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.h); this.ctx.stroke();
             }
-
-            drawObject(o) {
-                const x = o.x + this.cam.x + this.width/2;
-                const y = o.y + this.cam.y + this.height/2;
-                const time = Date.now() * 0.002;
-                
-                this.ctx.save();
-                this.ctx.translate(x, y);
-                
-                // Outer Glow
-                const g = this.ctx.createRadialGradient(0, 0, 0, 0, 0, o.s * 1.5);
-                g.addColorStop(0, o.c + '33');
-                g.addColorStop(1, 'transparent');
-                this.ctx.fillStyle = g;
-                this.ctx.beginPath(); this.ctx.arc(0, 0, o.s * 1.5, 0, Math.PI*2); this.ctx.fill();
-
-                // Main Shape
-                this.ctx.strokeStyle = o.c;
-                this.ctx.lineWidth = 3;
-                this.ctx.shadowBlur = 20;
-                this.ctx.shadowColor = o.c;
-                
-                this.ctx.rotate(time * 0.1);
-                this.ctx.strokeRect(-o.s/2, -o.s/2, o.s, o.s);
-                this.ctx.rotate(-time * 0.2);
-                this.ctx.strokeRect(-o.s/1.4, -o.s/1.4, o.s*1.4, o.s*1.4);
-                
-                this.ctx.restore();
-                
-                this.ctx.fillStyle = "#fff";
-                this.ctx.font = "900 12px Orbitron";
-                this.ctx.textAlign = "center";
-                this.ctx.fillText(o.t, x, y + o.s + 40);
-            }
-
-            render() {
-                this.cam.x += (this.cam.tX - this.cam.x) * 0.1;
-                this.cam.y += (this.cam.tY - this.cam.y) * 0.1;
-
-                this.drawBackground();
-
-                // Stars/Particles
-                this.ctx.fillStyle = "rgba(0, 242, 255, 0.4)";
-                this.state.stars.forEach(p => {
-                    const px = (p.x + this.cam.x * 0.7 + 3000) % 3000 - 1500 + this.width/2;
-                    const py = (p.y + this.cam.y * 0.7 + 3000) % 3000 - 1500 + this.height/2;
-                    this.ctx.fillRect(px, py, p.v/2, p.v/2);
-                });
-
-                this.state.objs.forEach(o => this.drawObject(o));
-
-                this.state.bal += 0.005;
-                document.getElementById('balance').innerText = this.state.bal.toFixed(2);
-
-                requestAnimationFrame(() => this.render());
+            for(let y = oy; y < this.h; y += step) {
+                this.ctx.beginPath(); this.ctx.moveTo(0, y); this.ctx.lineTo(this.w, y); this.ctx.stroke();
             }
         }
 
-        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: 'https://cybersich.vercel.app/tonconnect-manifest.json',
-            buttonRootId: 'ton-connect'
-        });
+        drawNode(n) {
+            const x = n.x + this.cam.x + this.w/2;
+            const y = n.y + this.cam.y + this.h/2;
+            const time = Date.now() * 0.002;
+            const pulse = 1 + Math.sin(time) * 0.05;
 
-        const SichWorld = new GameWorld();
+            this.ctx.save();
+            this.ctx.translate(x, y);
+            
+            // Outer Aura
+            const grad = this.ctx.createRadialGradient(0,0,0,0,0, n.size*2);
+            grad.addColorStop(0, n.color + '22');
+            grad.addColorStop(1, 'transparent');
+            this.ctx.fillStyle = grad;
+            this.ctx.beginPath(); this.ctx.arc(0,0, n.size*2 * pulse, 0, Math.PI*2); this.ctx.fill();
 
-        function forgeAction() {
-            Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-            alert("ПРОТОКОЛ КУЗНІ ЗАПУЩЕНО: Очікуйте на виплавку юніта...");
+            // Geometric Core
+            this.ctx.strokeStyle = n.color;
+            this.ctx.lineWidth = 2;
+            this.ctx.shadowBlur = 15;
+            this.ctx.shadowColor = n.color;
+            
+            this.ctx.rotate(time * 0.2);
+            for(let i=0; i<3; i++) {
+                this.ctx.rotate(Math.PI/1.5);
+                this.ctx.strokeRect(-n.size/2 * pulse, -n.size/2 * pulse, n.size * pulse, n.size * pulse);
+            }
+            
+            this.ctx.restore();
+            
+            this.ctx.fillStyle = "#fff";
+            this.ctx.font = "900 10px Orbitron";
+            this.ctx.textAlign = "center";
+            this.ctx.fillText(n.name, x, y + n.size + 40);
         }
-    </script>
+
+        loop() {
+            this.cam.x += (this.cam.tx - this.cam.x) * 0.1;
+            this.cam.y += (this.cam.ty - this.cam.y) * 0.1;
+
+            this.ctx.fillStyle = '#020205';
+            this.ctx.fillRect(0, 0, this.w, this.h);
+
+            this.drawGrid();
+
+            // Particles
+            this.ctx.fillStyle = "rgba(0, 242, 255, 0.2)";
+            this.dust.forEach(p => {
+                const px = (p.x + this.cam.x * 0.5 + 4000) % 4000 - 2000 + this.w/2;
+                const py = (p.y + this.cam.y * 0.5 + 4000) % 4000 - 2000 + this.h/2;
+                this.ctx.fillRect(px, py, p.s, p.s);
+            });
+
+            this.nodes.forEach(n => this.drawNode(n));
+
+            this.user.bal += CFG.SICH_PER_SEC * this.user.multiplier;
+            document.getElementById('bal').innerText = this.user.bal.toFixed(3);
+
+            requestAnimationFrame(() => this.loop());
+        }
+    }
+
+    // Modal Logic
+    function openM(type, data = null) {
+        const ov = document.getElementById('ov');
+        const tit = document.getElementById('m-title');
+        const bod = document.getElementById('m-body');
+        const ext = document.getElementById('m-extra');
+        ext.innerHTML = "";
+        ov.style.display = 'flex';
+
+        if(type === 'node') {
+            tit.innerText = data.name;
+            bod.innerText = data.desc;
+            ext.innerHTML = `<button class="action-btn" onclick="nodeAction('${data.id}')">ВЗАЄМОДІЯ</button>`;
+        } else if(type === 'inventory') {
+            tit.innerText = "ARMORY_DATABASE";
+            bod.innerText = "Твої бойові одиниці NFT. 50 Легендарних слотів доступно.";
+            let g = '<div class="grid-nft">';
+            for(let i=0; i<12; i++) g += '<div class="nft-slot">LOCKED</div>';
+            ext.innerHTML = g + '</div>';
+        }
+    }
+
+    function closeM() { document.getElementById('ov').style.display = 'none'; }
+    function nodeAction(id) { 
+        APP.HapticFeedback.notificationOccurred('success');
+        APP.showAlert(`Протокол ${id} активовано. Систему оновлено.`);
+        closeM();
+    }
+
+    // Start
+    const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+        manifestUrl: 'https://cybersich.vercel.app/tonconnect-manifest.json',
+        buttonRootId: 'ton-connect'
+    });
+
+    const Engine = new SichEngine();
+
+</script>
 </body>
 </html>
